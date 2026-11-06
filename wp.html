@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="FocusFlowApp">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FocusFlow+</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --surface3: #222737;
+    --border: #2a2f3f;
+    --accent: #e8c97a;
+    --accent2: #7a9ee8;
+    --accent3: #e87a9e;
+    --accent4: #7ae8c9;
+    --text: #eef0f6;
+    --text2: #9499b0;
+    --text3: #5c6180;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(232,201,122,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(122,158,232,0.04) 0%, transparent 60%);
+  }
+  .app-shell { display: flex; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 230px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    position: fixed; height: 100vh; z-index: 100; padding: 28px 0;
+  }
+  .logo { padding: 0 24px 28px; border-bottom: 1px solid var(--border); }
+  .logo-mark { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 900; color: var(--accent); }
+  .logo-sub { font-size: 10px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+  nav { padding: 16px 12px; flex: 1; }
+  .nav-label { font-size: 10px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; padding: 0 12px; margin-bottom: 8px; margin-top: 12px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    color: var(--text2); font-size: 14px; font-weight: 500; transition: all 0.2s; margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(232,201,122,0.12); color: var(--accent); }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-footer { padding: 16px 24px; border-top: 1px solid var(--border); }
+  .xp-bar-wrap { margin-top: 8px; background: var(--surface2); border-radius: 99px; height: 5px; overflow: hidden; }
+  .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent3)); border-radius: 99px; transition: width 0.4s; }
+
+  /* MAIN */
+  .main { margin-left: 230px; flex: 1; padding: 32px 36px; }
+  .page-header { margin-bottom: 28px; }
+  .page-title { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; }
+  .page-sub { font-size: 13px; color: var(--text3); margin-top: 3px; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+  .card-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+  .card-value { font-family: 'Playfair Display', serif; font-size: 34px; font-weight: 700; }
+  .card-value span { font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--text3); font-weight: 400; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+
+  /* TIMER */
+  .timer-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; text-align: center; position: relative; overflow: hidden; }
+  .timer-section::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 260px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+  .timer-ring-wrap { position: relative; width: 200px; height: 200px; margin: 0 auto 24px; }
+  .timer-svg { transform: rotate(-90deg); }
+  .timer-track { fill: none; stroke: var(--surface2); stroke-width: 8; }
+  .timer-progress { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 565; transition: stroke-dashoffset 1s linear; }
+  .timer-progress.break { stroke: var(--accent4); }
+  .timer-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+  .timer-display { font-family: 'DM Mono', monospace; font-size: 46px; font-weight: 500; line-height: 1; }
+  .timer-mode { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; }
+  .timer-controls { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+
+  /* BUTTONS */
+  .btn { padding: 11px 24px; border-radius: 99px; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--accent); color: #0d0f14; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(232,201,122,0.3); }
+  .btn-secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--surface3); color: var(--text); }
+  .btn-icon { padding: 10px 12px; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  /* SESSION INFO */
+  .session-chips { display: flex; gap: 12px; justify-content: center; }
+  .session-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 99px; padding: 6px 14px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .dot.break { background: var(--accent4); }
+
+  /* FORM */
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+  .form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 13px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input.ng-invalid.ng-touched { border-color: var(--accent3); }
+  .form-input::placeholder { color: var(--text3); }
+  .form-select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 13px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235c6180' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; }
+  .form-select:focus { border-color: var(--accent); }
+  .error-msg { color: var(--accent3); font-size: 11px; margin-top: 4px; }
+
+  /* SUBJECT CHIPS */
+  .subject-picker { margin-bottom: 18px; }
+  .subject-picker label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 8px; }
+  .subject-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .subject-chip { padding: 6px 13px; border-radius: 99px; font-size: 13px; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); transition: all 0.2s; }
+  .subject-chip.selected { border-color: var(--accent); background: rgba(232,201,122,0.1); color: var(--accent); }
+
+  /* HABIT CARD */
+  .habit-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; display: flex; align-items: center; gap: 12px; transition: all 0.2s; margin-bottom: 8px; }
+  .habit-card.done { border-color: rgba(122,232,201,0.35); background: rgba(122,232,201,0.06); }
+  .habit-check { width: 26px; height: 26px; border-radius: 7px; border: 2px solid var(--border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.2s; flex-shrink: 0; }
+  .habit-check.checked { background: var(--accent4); border-color: var(--accent4); color: #0d0f14; }
+  .habit-info { flex: 1; }
+  .habit-name { font-size: 14px; font-weight: 500; }
+  .habit-streak { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .delete-btn { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.2s; flex-shrink: 0; }
+  .delete-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  /* SUBJECT LIST ROW */
+  .subject-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .subject-row:last-child { border-bottom: none; }
+  .subject-color { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .subject-name { flex: 1; font-size: 14px; font-weight: 500; }
+  .subject-bar-wrap { flex: 2; background: var(--surface2); border-radius: 99px; height: 4px; overflow: hidden; }
+  .subject-bar { height: 100%; border-radius: 99px; transition: width 0.4s; }
+  .subject-time { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text3); }
+
+  /* DASHBOARD BAR CHART */
+  .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 70px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; justify-content: flex-end; }
+  .bar-fill { width: 100%; border-radius: 4px 4px 0 0; min-height: 4px; background: linear-gradient(180deg, var(--accent), rgba(232,201,122,0.35)); }
+  .bar-label { font-size: 10px; color: var(--text3); }
+
+  /* STREAK */
+  .streak-grid { display: flex; flex-wrap: wrap; gap: 3px; }
+  .streak-dot { width: 13px; height: 13px; border-radius: 3px; background: var(--surface2); border: 1px solid var(--border); }
+  .streak-dot.done { background: var(--accent4); border-color: var(--accent4); }
+
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+  .badge-gold { background: rgba(232,201,122,0.15); color: var(--accent); }
+  .badge-teal { background: rgba(122,232,201,0.15); color: var(--accent4); }
+  .badge-blue { background: rgba(122,158,232,0.15); color: var(--accent2); }
+  .badge-pink { background: rgba(232,122,158,0.15); color: var(--accent3); }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 28px; right: 28px; z-index: 9999; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 18px; font-size: 13px; color: var(--text); box-shadow: 0 8px 28px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 9px; animation: slideIn 0.3s ease; max-width: 280px; border-left: 3px solid var(--accent4); }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* SECTIONS */
+  .section-panel { display: none; }
+  .section-panel.active { display: block; animation: fadeUp 0.25s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* COLOR PICKER */
+  .color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; transition: all 0.15s; border: 3px solid transparent; }
+  .color-dot.picked { border-color: white; transform: scale(1.15); }
+
+  /* LOG ROW */
+  .log-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .log-row:last-child { border-bottom: none; }
+
+  /* UTILS */
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .flex { display: flex; align-items: center; }
+  .flex-between { display: flex; align-items: center; justify-content: space-between; }
+  .gap-8 { gap: 8px; }
+  .gap-10 { gap: 10px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-8 { margin-top: 8px; }
+  .mb-16 { margin-bottom: 16px; }
+  .mb-12 { margin-bottom: 12px; }
+  .fw-600 { font-weight: 600; }
+  .fs-14 { font-size: 14px; }
+  .fs-13 { font-size: 13px; }
+  .fs-12 { font-size: 12px; }
+  .text2 { color: var(--text2); }
+  .text3 { color: var(--text3); }
+  .accent-gold { color: var(--accent); }
+  .accent-blue { color: var(--accent2); }
+  .accent-pink { color: var(--accent3); }
+  .accent-teal { color: var(--accent4); }
+  .empty { text-align: center; padding: 32px; color: var(--text3); font-size: 13px; }
+  .empty .em-icon { font-size: 32px; margin-bottom: 10px; }
+  .mr-8 { margin-right: 8px; }
+</style>
+</head>
+<body ng-controller="AppCtrl">
+
+<!-- TOAST -->
+<div class="toast" ng-if="toast.show">{{toast.icon}} {{toast.msg}}</div>
+
+<div class="app-shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">FocusFlow+</div>
+      <div class="logo-sub">Study &amp; Habit System</div>
+    </div>
+    <nav>
+      <div class="nav-label">Navigation</div>
+      <div class="nav-item" ng-class="{active: page==='dashboard'}" ng-click="setPage('dashboard')">
+        <span class="icon">📊</span><span>Dashboard</span>
+      </div>
+      <div class="nav-item" ng-class="{active: page==='timer'}" ng-click="setPage('timer')">
+        <span class="icon">⏱️</span><span>Focus Timer</span>
+      </div>
+      <div class="nav-item" ng-class="{active: page==='subjects'}" ng-click="setPage('subjects')">
+        <span class="icon">📚</span><span>Subjects</span>
+      </div>
+      <div class="nav-item" ng-class="{active: page==='habits'}" ng-click="setPage('habits')">
+        <span class="icon">🔥</span><span>Habits</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="fs-12 text3">Level {{userLevel}} Scholar</div>
+      <div class="fs-12 text3" style="margin-top:2px">{{userXP}} XP earned</div>
+      <div class="xp-bar-wrap">
+        <div class="xp-bar-fill" style="width:{{xpPercent()}}%"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="section-panel" ng-class="{active: page==='dashboard'}">
+      <div class="page-header">
+        <div class="page-title">Good {{greeting}} 👋</div>
+        <div class="page-sub">{{todayDate}} · Stay consistent, keep growing!</div>
+      </div>
+
+      <div class="grid-4">
+        <div class="card">
+          <div class="card-title">Study Time</div>
+          <div class="card-value accent-gold">{{formatHours(totalStudyMinutes)}} <span>hrs</span></div>
+          <div class="fs-12 text3 mt-8">All time total</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Today's Pomodoros</div>
+          <div class="card-value accent-teal">{{todaySessions}} <span>done</span></div>
+          <div class="fs-12 text3 mt-8">Focus sessions</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Best Habit Streak</div>
+          <div class="card-value accent-pink">{{bestStreak}} <span>days</span></div>
+          <div class="fs-12 text3 mt-8">🔥 Personal record</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Habits Today</div>
+          <div class="card-value accent-blue">{{todayHabitsDone}}<span>/{{habits.length}}</span></div>
+          <div class="fs-12 text3 mt-8">Completed today</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="flex-between mb-16">
+            <div class="card-title" style="margin:0">Weekly Study (mins)</div>
+            <div class="badge badge-gold">This Week</div>
+          </div>
+          <div class="bar-chart">
+            <div class="bar-col" ng-repeat="d in weeklyData">
+              <div class="bar-fill" style="height:{{d.pct || 2}}%"></div>
+              <div class="bar-label">{{d.day}}</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title mb-12">Top Subjects</div>
+          <div ng-if="subjects.length === 0" class="empty" style="padding:20px">
+            <div class="em-icon">📚</div>No subjects yet. Add some!
+          </div>
+          <div ng-repeat="s in subjects | orderBy:'-totalMinutes' | limitTo:4" class="subject-row">
+            <div class="subject-color" style="background:{{s.color}}"></div>
+            <div class="subject-name">{{s.name}}</div>
+            <div class="subject-bar-wrap">
+              <div class="subject-bar" style="width:{{subjectBarPct(s)}}%; background:{{s.color}}"></div>
+            </div>
+            <div class="subject-time">{{formatMins(s.totalMinutes)}}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex-between mb-16">
+          <div class="card-title" style="margin:0">Habit Status — Today</div>
+          <div class="badge badge-teal">{{todayHabitsDone}} / {{habits.length}} done</div>
+        </div>
+        <div ng-if="habits.length === 0" class="empty" style="padding:16px">
+          <div class="em-icon">🌱</div>Add habits to start tracking!
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <div ng-repeat="h in habits" class="session-chip" style="{{isTodayDone(h) ? 'border-color:rgba(122,232,201,0.4); background:rgba(122,232,201,0.07)' : ''}}">
+            <div class="dot" style="background:{{isTodayDone(h) ? 'var(--accent4)' : 'var(--text3)'}}"></div>
+            {{h.name}} <span ng-if="isTodayDone(h)" style="color:var(--accent4)">✓</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TIMER ===== -->
+    <div class="section-panel" ng-class="{active: page==='timer'}">
+      <div class="page-header">
+        <div class="page-title">Focus Timer ⏱️</div>
+        <div class="page-sub">Pomodoro · 25 min focus + 5 min break</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="timer-section">
+          <div class="subject-picker">
+            <label>Currently Studying</label>
+            <div class="subject-chips">
+              <div class="subject-chip" ng-class="{selected: timerSubject===null}" ng-click="timerSubject=null">General</div>
+              <div class="subject-chip" ng-repeat="s in subjects"
+                   ng-class="{selected: timerSubject===s}"
+                   ng-click="timerSubject=s">{{s.name}}</div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="timer-ring-wrap">
+            <svg class="timer-svg" width="200" height="200" viewBox="0 0 200 200">
+              <circle class="timer-track" cx="100" cy="100" r="90"/>
+              <circle class="timer-progress" ng-class="{break: timerMode==='break'}"
+                cx="100" cy="100" r="90"
+                style="stroke-dashoffset: {{timerOffset()}}"/>
+            </svg>
+            <div class="timer-center">
+              <div class="timer-display">{{timerDisplay()}}</div>
+              <div class="timer-mode">{{timerMode === 'focus' ? '🎯 Focus' : '☕ Break'}}</div>
+            </div>
+          </div>
+          <div class="timer-controls">
+            <button class="btn btn-secondary btn-icon" ng-click="resetTimer()" title="Reset">↺</button>
+            <button class="btn btn-primary" ng-click="toggleTimer()" style="min-width:100px">
+              {{timerRunning ? '⏸ Pause' : '▶ Start'}}
+            </button>
+            <button class="btn btn-secondary btn-icon" ng-click="skipTimer()" title="Skip">⏭</button>
+          </div>
+          <div class="session-chips">
+            <div class="session-chip"><div class="dot"></div>Sessions: {{todaySessions}}</div>
+            <div class="session-chip"><div class="dot break"></div>Breaks: {{todayBreaks}}</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card mb-12" style="margin-bottom:16px">
+            <div class="card-title">Session Log</div>
+            <div ng-if="sessionLog.length === 0" class="empty" style="padding:20px">
+              <div class="em-icon">📝</div>No sessions yet today
+            </div>
+            <div class="log-row" ng-repeat="log in sessionLog | limitTo:7">
+              <div>
+                <div class="fs-14 fw-600">{{log.subject}}</div>
+                <div class="fs-12 text3">{{log.mode === 'focus' ? '25 min focus' : '5 min break'}} · {{log.time}}</div>
+              </div>
+              <div class="badge" ng-class="log.mode === 'focus' ? 'badge-gold' : 'badge-teal'">
+                {{log.mode === 'focus' ? '🎯 Focus' : '☕ Break'}}
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Focus Tips</div>
+            <div class="fs-13 text2" style="line-height:1.8; margin-top:8px">
+              🎯 Complete the full 25 minutes without distractions<br>
+              ☕ Your break recharges memory — don't skip it!<br>
+              📵 Put phone on silent during focus time<br>
+              💧 Drink water between sessions<br>
+              🔥 4 sessions = 1 deep work block
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SUBJECTS ===== -->
+    <div class="section-panel" ng-class="{active: page==='subjects'}">
+      <div class="page-header">
+        <div class="page-title">Subjects 📚</div>
+        <div class="page-sub">Manage and track time per subject</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title mb-12">Add New Subject</div>
+          <form name="subjectForm" novalidate ng-submit="addSubject(subjectForm)">
+            <div class="form-group">
+              <label>Subject Name *</label>
+              <input class="form-input" ng-model="newSubject.name" name="sname"
+                     required minlength="2" maxlength="30"
+                     placeholder="e.g. Mathematics, Web Dev...">
+              <div class="error-msg" ng-if="subjectForm.sname.$touched && subjectForm.sname.$error.required">⚠ Name is required</div>
+              <div class="error-msg" ng-if="subjectForm.sname.$touched && subjectForm.sname.$error.minlength">⚠ Minimum 2 characters</div>
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select class="form-select" ng-model="newSubject.category">
+                <option value="science">🔬 Science</option>
+                <option value="math">📐 Mathematics</option>
+                <option value="language">📖 Language</option>
+                <option value="tech">💻 Technology</option>
+                <option value="humanities">🏛️ Humanities</option>
+                <option value="arts">🎨 Arts</option>
+                <option value="other">⭐ Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Pick a Color</label>
+              <div style="display:flex; gap:7px; flex-wrap:wrap; margin-top:4px;">
+                <div ng-repeat="c in colorOptions"
+                  ng-click="newSubject.color=c"
+                  class="color-dot"
+                  ng-class="{picked: newSubject.color===c}"
+                  style="background:{{c}}">
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Daily Goal (minutes) *</label>
+              <input class="form-input" ng-model="newSubject.goal" name="sgoal"
+                     type="number" min="5" max="480" required placeholder="e.g. 60">
+              <div class="error-msg" ng-if="subjectForm.sgoal.$touched && subjectForm.sgoal.$error.required">⚠ Goal is required</div>
+              <div class="error-msg" ng-if="subjectForm.sgoal.$touched && subjectForm.sgoal.$error.min">⚠ Minimum 5 minutes</div>
+            </div>
+            <button class="btn btn-primary btn-full" type="submit">+ Add Subject</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="flex-between mb-12">
+            <div class="card-title" style="margin:0">Your Subjects</div>
+            <div class="badge badge-blue">{{subjects.length}} total</div>
+          </div>
+          <div ng-if="subjects.length === 0" class="empty">
+            <div class="em-icon">📚</div>Add your first subject above!
+          </div>
+          <div ng-repeat="s in subjects">
+            <div class="flex-between gap-10" style="padding: 12px 0; border-bottom: 1px solid var(--border);">
+              <div class="flex gap-10">
+                <div style="width:10px; height:10px; border-radius:50%; background:{{s.color}}; flex-shrink:0; margin-top:4px;"></div>
+                <div>
+                  <div class="fs-14 fw-600">{{s.name}}</div>
+                  <div class="fs-12 text3">{{s.category}} · Goal: {{s.goal}} min/day</div>
+                  <div style="background:var(--surface2); border-radius:99px; height:4px; overflow:hidden; width:140px; margin-top:6px;">
+                    <div style="height:4px; border-radius:99px; background:{{s.color}}; width:{{Math.min(subjectGoalPct(s),100)}}%; transition:width 0.4s;"></div>
+                  </div>
+                  <div class="fs-12 text3 mt-8">{{Math.min(subjectGoalPct(s),100)|number:0}}% of today's goal</div>
+                </div>
+              </div>
+              <div class="flex gap-8" style="align-items:flex-start">
+                <div class="badge badge-gold">{{formatMins(s.totalMinutes)}}</div>
+                <button class="delete-btn" ng-click="deleteSubject($index)">✕</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== HABITS ===== -->
+    <div class="section-panel" ng-class="{active: page==='habits'}">
+      <div class="page-header">
+        <div class="page-title">Habit Tracker 🔥</div>
+        <div class="page-sub">Daily check-ins · Build lasting streaks</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title mb-12">Add New Habit</div>
+          <form name="habitForm" novalidate ng-submit="addHabit(habitForm)">
+            <div class="form-group">
+              <label>Habit Name *</label>
+              <input class="form-input" ng-model="newHabit.name" name="hname"
+                     required minlength="2" maxlength="50"
+                     placeholder="e.g. Morning Study, Exercise...">
+              <div class="error-msg" ng-if="habitForm.hname.$touched && habitForm.hname.$error.required">⚠ Habit name is required</div>
+              <div class="error-msg" ng-if="habitForm.hname.$touched && habitForm.hname.$error.minlength">⚠ At least 2 characters</div>
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select class="form-select" ng-model="newHabit.category">
+                <option value="study">📚 Study</option>
+                <option value="health">💪 Health &amp; Fitness</option>
+                <option value="mindfulness">🧘 Mindfulness</option>
+                <option value="creative">🎨 Creative</option>
+                <option value="social">🤝 Social</option>
+                <option value="other">⭐ Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Target Days per Week *</label>
+              <input class="form-input" ng-model="newHabit.targetDays" name="htarget"
+                     type="number" min="1" max="7" required placeholder="e.g. 5">
+              <div class="error-msg" ng-if="habitForm.htarget.$touched && habitForm.htarget.$error.required">⚠ Required (1–7 days)</div>
+              <div class="error-msg" ng-if="habitForm.htarget.$touched && (habitForm.htarget.$error.min || habitForm.htarget.$error.max)">⚠ Enter a value between 1 and 7</div>
+            </div>
+            <div class="form-group">
+              <label>Motivation Note</label>
+              <input class="form-input" ng-model="newHabit.note" name="hnote"
+                     maxlength="70" placeholder="Why does this habit matter to you?">
+            </div>
+            <button class="btn btn-primary btn-full" type="submit">+ Add Habit</button>
+          </form>
+        </div>
+
+        <div>
+          <div class="card mb-12" style="margin-bottom:16px">
+            <div class="flex-between mb-12">
+              <div class="card-title" style="margin:0">Today's Check-in</div>
+              <div class="badge badge-teal">{{todayHabitsDone}}/{{habits.length}} done</div>
+            </div>
+            <div ng-if="habits.length === 0" class="empty" style="padding:20px">
+              <div class="em-icon">🌱</div>Add your first habit to get started!
+            </div>
+            <div ng-repeat="h in habits" class="habit-card" ng-class="{done: isTodayDone(h)}">
+              <div class="habit-check" ng-class="{checked: isTodayDone(h)}" ng-click="toggleHabit(h)">
+                <span ng-if="isTodayDone(h)">✓</span>
+              </div>
+              <div class="habit-info">
+                <div class="habit-name">{{h.name}}</div>
+                <div class="habit-streak">
+                  🔥 {{h.streak}} day streak · {{h.targetDays}}x/week
+                  <span ng-if="h.note"> · "{{h.note}}"</span>
+                </div>
+              </div>
+              <div class="flex gap-8">
+                <div class="badge" ng-class="getCategoryBadge(h.category)">{{getCategoryIcon(h.category)}}</div>
+                <button class="delete-btn" ng-click="deleteHabit($index)">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title mb-12">Streak Calendar — Last 21 Days</div>
+            <div ng-if="habits.length === 0" class="empty" style="padding:16px">No habits to show</div>
+            <div ng-repeat="h in habits | limitTo:3" style="margin-bottom:14px;">
+              <div class="fs-13 fw-600 text2" style="margin-bottom:6px;">{{h.name}} <span class="fs-12 text3">({{h.streak}} day streak)</span></div>
+              <div class="streak-grid">
+                <div ng-repeat="d in last21Days(h)" class="streak-dot" ng-class="{done: d}"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+angular.module('FocusFlowApp', [])
+.controller('AppCtrl', function($scope, $interval) {
+
+  $scope.Math = Math;
+  $scope.page = 'dashboard';
+
+  // Greeting
+  var h = new Date().getHours();
+  $scope.greeting = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening';
+  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var now = new Date();
+  $scope.todayDate = days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate() + ' ' + now.getFullYear();
+
+  // Colors
+  $scope.colorOptions = ['#e8c97a','#7ae8c9','#7a9ee8','#e87a9e','#a87ae8','#e8a87a','#78c8f0','#b0e878','#f0a878','#78e8b0'];
+
+  // Local Storage helpers
+  function save() {
+    try {
+      localStorage.setItem('ff2_subjects', JSON.stringify($scope.subjects));
+      localStorage.setItem('ff2_habits', JSON.stringify($scope.habits));
+      localStorage.setItem('ff2_log', JSON.stringify($scope.sessionLog));
+      localStorage.setItem('ff2_sessions', $scope.todaySessions);
+      localStorage.setItem('ff2_breaks', $scope.todayBreaks);
+      localStorage.setItem('ff2_weekly', JSON.stringify($scope.weeklyData));
+      localStorage.setItem('ff2_xp', $scope.userXP);
+      localStorage.setItem('ff2_date', new Date().toDateString());
+    } catch(e) {}
+  }
+
+  function load() {
+    var lastDate = localStorage.getItem('ff2_date');
+    var todayStr = new Date().toDateString();
+    var newDay = lastDate !== todayStr;
+
+    $scope.subjects = JSON.parse(localStorage.getItem('ff2_subjects') || '[]');
+    $scope.habits = JSON.parse(localStorage.getItem('ff2_habits') || '[]');
+    $scope.sessionLog = JSON.parse(localStorage.getItem('ff2_log') || '[]');
+    $scope.userXP = parseInt(localStorage.getItem('ff2_xp') || '0');
+
+    if (!newDay) {
+      $scope.todaySessions = parseInt(localStorage.getItem('ff2_sessions') || '0');
+      $scope.todayBreaks = parseInt(localStorage.getItem('ff2_breaks') || '0');
+    } else {
+      $scope.todaySessions = 0;
+      $scope.todayBreaks = 0;
+      // Check streaks on new day
+      var yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+      var yStr = yesterday.toDateString();
+      $scope.habits.forEach(function(habit) {
+        if (habit.lastChecked !== yStr && habit.lastChecked !== todayStr) {
+          habit.streak = 0;
+        }
+      });
+    }
+
+    var storedWeekly = localStorage.getItem('ff2_weekly');
+    if (storedWeekly) {
+      $scope.weeklyData = JSON.parse(storedWeekly);
+    } else {
+      initWeeklyData();
+    }
+  }
+
+  function initWeeklyData() {
+    var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    $scope.weeklyData = [];
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(); d.setDate(d.getDate() - i);
+      $scope.weeklyData.push({ day: dayNames[d.getDay()], mins: 0, pct: 0 });
+    }
+  }
+
+  load();
+
+  // Computed
+  Object.defineProperty($scope, 'totalStudyMinutes', {
+    get: function() { return $scope.subjects.reduce(function(a,s){ return a+(s.totalMinutes||0); }, 0); }
+  });
+  Object.defineProperty($scope, 'todayHabitsDone', {
+    get: function() { var t=new Date().toDateString(); return $scope.habits.filter(function(h){ return h.lastChecked===t; }).length; }
+  });
+  Object.defineProperty($scope, 'bestStreak', {
+    get: function() { return $scope.habits.reduce(function(a,h){ return Math.max(a, h.streak||0); }, 0); }
+  });
+
+  $scope.userLevel = Math.floor($scope.userXP / 100) + 1;
+  $scope.xpPercent = function() { return $scope.userXP % 100; };
+
+  // Navigation
+  $scope.setPage = function(p) { $scope.page = p; };
+
+  // Toast
+  $scope.toast = { show: false };
+  var toastTimer = null;
+  function showToast(msg, icon) {
+    if (toastTimer) clearTimeout(toastTimer);
+    $scope.toast = { show: true, msg: msg, icon: icon || '✨' };
+    toastTimer = setTimeout(function() {
+      $scope.$apply(function() { $scope.toast.show = false; });
+    }, 2800);
+  }
+
+  // ===== SUBJECTS =====
+  $scope.newSubject = { name: '', category: 'tech', color: '#e8c97a', goal: 60 };
+
+  $scope.addSubject = function(form) {
+    form.$setSubmitted();
+    if (form.$invalid) return;
+    var dup = $scope.subjects.some(function(s){ return s.name.toLowerCase() === $scope.newSubject.name.toLowerCase(); });
+    if (dup) { showToast('Subject already exists!', '⚠️'); return; }
+    $scope.subjects.push({
+      name: $scope.newSubject.name,
+      category: $scope.newSubject.category,
+      color: $scope.newSubject.color,
+      goal: parseInt($scope.newSubject.goal) || 60,
+      totalMinutes: 0,
+      history: {}
+    });
+    $scope.newSubject = { name: '', category: 'tech', color: '#e8c97a', goal: 60 };
+    form.$setPristine(); form.$setUntouched();
+    save();
+    showToast('Subject added! 📚', '📚');
+  };
+
+  $scope.deleteSubject = function(i) { $scope.subjects.splice(i,1); save(); showToast('Subject removed', '🗑️'); };
+
+  $scope.subjectBarPct = function(s) {
+    var max = Math.max.apply(null, $scope.subjects.map(function(x){ return x.totalMinutes||0; }).concat([1]));
+    return (s.totalMinutes / max) * 100;
+  };
+
+  $scope.subjectGoalPct = function(s) {
+    var today = new Date().toDateString();
+    var todayMins = (s.history && s.history[today]) || 0;
+    return (todayMins / (s.goal || 60)) * 100;
+  };
+
+  // ===== HABITS =====
+  $scope.newHabit = { name: '', category: 'study', targetDays: 5, note: '' };
+
+  $scope.addHabit = function(form) {
+    form.$setSubmitted();
+    if (form.$invalid) return;
+    $scope.habits.push({
+      name: $scope.newHabit.name,
+      category: $scope.newHabit.category,
+      targetDays: parseInt($scope.newHabit.targetDays),
+      note: $scope.newHabit.note || '',
+      streak: 0, lastChecked: null, history: []
+    });
+    $scope.newHabit = { name: '', category: 'study', targetDays: 5, note: '' };
+    form.$setPristine(); form.$setUntouched();
+    save();
+    showToast('Habit added! Start building that streak 🔥', '🔥');
+  };
+
+  $scope.deleteHabit = function(i) { $scope.habits.splice(i,1); save(); showToast('Habit removed', '🗑️'); };
+
+  $scope.isTodayDone = function(h) { return h.lastChecked === new Date().toDateString(); };
+
+  $scope.toggleHabit = function(h) {
+    var today = new Date().toDateString();
+    if (h.lastChecked === today) {
+      h.lastChecked = null; h.streak = Math.max(0, h.streak - 1);
+      h.history = (h.history || []).filter(function(d){ return d !== today; });
+    } else {
+      h.lastChecked = today; h.streak++;
+      if (!h.history) h.history = [];
+      h.history.push(today);
+      $scope.userXP += 10; $scope.userLevel = Math.floor($scope.userXP/100)+1;
+      showToast('Habit done! +10 XP 🎉', '✅');
+    }
+    save();
+  };
+
+  $scope.last21Days = function(h) {
+    var out = [];
+    for (var i = 20; i >= 0; i--) {
+      var d = new Date(); d.setDate(d.getDate()-i);
+      out.push((h.history||[]).indexOf(d.toDateString()) !== -1);
+    }
+    return out;
+  };
+
+  $scope.getCategoryIcon = function(c) {
+    return {study:'📚',health:'💪',mindfulness:'🧘',creative:'🎨',social:'🤝',other:'⭐'}[c]||'⭐';
+  };
+  $scope.getCategoryBadge = function(c) {
+    return {study:'badge-blue',health:'badge-teal',mindfulness:'badge-gold',creative:'badge-pink',social:'badge-blue',other:'badge-gold'}[c]||'badge-gold';
+  };
+
+  // ===== TIMER =====
+  var FOCUS = 25*60, BREAK = 5*60;
+  $scope.timerMode = 'focus';
+  $scope.timerRunning = false;
+  $scope.timerSubject = null;
+  $scope.timerSeconds = FOCUS;
+  $scope.sessionLog = $scope.sessionLog || [];
+  var timerInt = null;
+
+  $scope.timerDisplay = function() {
+    var m = Math.floor($scope.timerSeconds/60), s = $scope.timerSeconds%60;
+    return (m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  };
+
+$scope.toggleTimer = function() {
+    if ($scope.timerRunning) {
+      $interval.cancel(timerInt); $scope.timerRunning = false;
+    } else {
+      $scope.timerRunning = true;
+      timerInt = $interval(function() {
+        if ($scope.timerSeconds > 0) { $scope.timerSeconds--; }
+        else { $interval.cancel(timerInt); $scope.timerRunning = false; completeSession(); }
+      }, 1000);
+    }
+  };
+
+  function completeSession() {
+    var mode = $scope.timerMode;
+    var subj = $scope.timerSubject ? $scope.timerSubject.name : 'General';
+    var t = new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+    $scope.sessionLog.unshift({subject: subj, mode: mode, time: t});
+    if ($scope.sessionLog.length > 20) $scope.sessionLog = $scope.sessionLog.slice(0,20);
+
+    if (mode === 'focus') {
+      $scope.todaySessions++;
+      $scope.userXP += 25; $scope.userLevel = Math.floor($scope.userXP/100)+1;
+      if ($scope.timerSubject) {
+        var today = new Date().toDateString();
+        $scope.timerSubject.totalMinutes = ($scope.timerSubject.totalMinutes||0) + 25;
+        if (!$scope.timerSubject.history) $scope.timerSubject.history = {};
+        $scope.timerSubject.history[today] = ($scope.timerSubject.history[today]||0) + 25;
+      }
+      var idx = $scope.weeklyData.length - 1;
+      $scope.weeklyData[idx].mins += 25;
+      recalcWeekly();
+      $scope.timerMode = 'break'; $scope.timerSeconds = BREAK;
+      showToast('Focus complete! +25 XP 🎉 Take a break!', '🎯');
+    } else {
+      $scope.todayBreaks++;
+      $scope.timerMode = 'focus'; $scope.timerSeconds = FOCUS;
+      showToast('Break over! Ready for next session?', '☕');
+    }
+    save();
+  }
+
+  function recalcWeekly() {
+    var max = Math.max.apply(null, $scope.weeklyData.map(function(d){ return d.mins; }).concat([1]));
+    $scope.weeklyData.forEach(function(d){ d.pct = (d.mins/max)*100; });
+  }
+  recalcWeekly();
+
+  $scope.resetTimer = function() {
+    $interval.cancel(timerInt); $scope.timerRunning = false;
+    $scope.timerSeconds = $scope.timerMode==='focus' ? FOCUS : BREAK;
+  };
+
+  $scope.skipTimer = function() {
+    $interval.cancel(timerInt); $scope.timerRunning = false;
+    $scope.timerMode = $scope.timerMode==='focus' ? 'break' : 'focus';
+    $scope.timerSeconds = $scope.timerMode==='focus' ? FOCUS : BREAK;
+  };
+
+  // Utils
+  $scope.formatHours = function(m) { return (m/60).toFixed(1); };
+  $scope.formatMins = function(m) {
+    if (!m) return '0m';
+    var hh = Math.floor(m/60), mm = m%60;
+    return hh > 0 ? hh+'h '+(mm?mm+'m':'') : mm+'m';
+  };
+});
+</script>
+</body>
+</html>
