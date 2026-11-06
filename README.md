@@ -63,7 +63,7 @@ The objective of FocusFlow+ is to make student productivity more engaging by com
 
 ## 👩‍💻 Author
 
-**Siddhi Bhadane**
+**Siddhi Bhadane**,
 **Pranjal Girase**
 
 B.Tech – Computer Engineering
